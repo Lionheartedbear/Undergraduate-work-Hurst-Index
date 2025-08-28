@@ -1,0 +1,546 @@
+\documentclass[12pt,letterpaper]{article}
+\usepackage{fullpage}
+\usepackage[top=2cm, bottom=4.5cm, left=2.5cm, right=2.5cm]{geometry}
+\usepackage{amsmath,amsthm,amsfonts,amssymb,amscd}
+\usepackage{lastpage}
+\usepackage{enumerate}
+\usepackage{fancyhdr}
+\usepackage{mathrsfs}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{tikz}
+\usepackage{relsize}
+\usepackage{fancyvrb}
+\usepackage{import}
+\usepackage{float}
+\usepackage{xifthen}
+\usepackage{pdfpages}
+\usepackage{mathtools}
+\usepackage{transparent}
+\usetikzlibrary{shapes.geometric,fit}
+
+\hypersetup{%
+  colorlinks=true,
+  linkcolor=blue,
+  linkbordercolor={0 0 1}
+}
+
+\setlength{\parindent}{0.0in}
+\setlength{\parskip}{0.05in}
+
+\newtheorem*{theorem}{Theorem}
+
+% \theoremstyle{lemma}
+\newtheorem{lemma}{Lemma}
+\newtheorem{prop}{Proposition}
+
+\theoremstyle{definition}
+\newtheorem{statement}{Statement}
+\newtheorem*{definition}{Definition}
+\newtheorem{claim}{Claim}
+
+\newcommand{\contra}{\Rightarrow\!\Leftarrow}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\D}{\mathbb{D}}
+\newcommand{\F}{\mathbb{F}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\Zeq}{\mathbb{Z}_{\geq 0}}
+\newcommand{\Zg}{\mathbb{Z}_{>0}}
+\newcommand{\Req}{\mathbb{R}_{\geq 0}}
+\newcommand{\Rg}{\mathbb{R}_{>0}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\Ha}{\mathbb{H}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\lpnorm}[2]{\left|\left|{#1}\right|\right|_{L^{#2}}}
+\DeclareMathOperator{\ima}{im}
+\DeclareMathOperator{\spn}{span}
+\DeclareMathOperator{\rank}{rank}
+\DeclareMathOperator{\real}{Re}
+\DeclareMathOperator{\imag}{Im}
+\DeclareMathOperator{\diver}{div}
+\DeclareMathOperator{\curl}{curl}
+\DeclareMathOperator{\id}{id}
+\DeclareMathOperator{\inter}{int}
+\DeclareMathOperator{\Dr}{Dr}
+\DeclareMathOperator{\Jac}{Jac}
+\DeclareMathOperator{\Cov}{Cov}
+\DeclareMathOperator{\Var}{Var}
+\DeclareMathOperator{\res}{res}
+\allowdisplaybreaks
+
+\newcommand{\incfig}[1]{\input{./figures/#1.pdf_tex}}
+\graphicspath{ {./figures/} }
+
+\title{Estimating Fractional Brownian Motion with Noise}
+\author{}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+Suppose we have some fBM with stochastic volatility, \(X_t\), and some noisy process that we are able to observe: \(Y_t = X_t + \rho Z_t\) where \(\rho > 0\) and \((Z_t)_{t \geq 0}\) are i.i.d.\ \(N(0,1)\) variables. We would like to be able to extract the signal from the noise, and to somehow estimate both \(H\) and \(\sigma\). To do so, we will consider weighted averages of \(Y_t\) at different time-points to eliminate the noise. In particular, we will take the following:
+
+\begin{definition}
+  For \(g: [0,1] \rightarrow \R\), some constant \(\theta\), and some stochastic process \(W_t\), put
+  \begin{gather}
+    k_n = \frac{n^\kappa}{\theta} \\
+    g^n_j = g\left( \frac{j}{k_n} \right) \\
+    \overline{W}(g)^n_i = \sum_{j=1}^{k_n-1}g^n_j\left( W_{\frac{i+j-1}{n}} - W_{\frac{i+j-2}{n}} \right) = \sum_{j=1}^{k_n-1}g^n_j\Delta_{i+j-1}^n W \\
+    \widehat{W}(g)^n_i = \sum_{j=1}^{k_n}\left(g^n_j - g^n_{j-1}\right)^2\left(\Delta_{i+j-1}^n W\right)^2 = \sum_{j=1}^{k_n}\left(\Delta g^n_j\right)^2\left(\Delta_{i+j-1}^n W\right)^2
+  \end{gather}
+  Morally, the latter two expressions are \textit{averages} of the increments of the stochastic process, considered to try and smooth out the random noise.
+
+  Finally, let the autocovariance of increments of fBM (called \(B_t^H\)) be asymptotically
+  \begin{equation}
+    \E\left[ \left( (B_{t+h}^H - B_t^H)(B_{t+(r+1)h}^H - B_{t+rh}^H) \right) \right] \sim h^{2H}K_H(r)
+  \end{equation}
+  and take
+  \begin{equation}
+    \Gamma_r^H = \frac{K_H(r)}{K_H} =
+    \begin{cases}
+      1 & r = 0 \\
+      \frac{1}{2}\left| (r+1)^{2H} - 2r^{2H} + (r-1)^{2H}\right| & r \geq 1 \\
+    \end{cases}
+  \end{equation}
+  where \(K_H(0)\), the variance of an increment, will be abbreviated to \(K_H\).
+
+  Notationally, if we say that a random variable has some size \(f(n)\), then all \(L^p\) norms are bounded by \(f(n)\).
+\end{definition}
+
+We will ultimately show the following theorem:
+\begin{theorem}
+  Given some fBM with measurement error,
+  \begin{equation}
+    Y_t = X_t + \rho Z_t
+  \end{equation}
+  where
+  \begin{equation}
+    X_t = X_0 + A_t + B_t^H = X_0 + \int_0^tb_sds + K_H^{-\frac{1}{2}}\int_0^t(t-s)^{H - \frac{1}{2}}\sigma_sdB_s
+  \end{equation}
+  if we have the following conditions, % TODO: Explain what K_H is?
+  \begin{enumerate}
+    \item \(f: \R^L \rightarrow \R\) is \(C^2\) with all partial derivatives up to order 2 of at most polynomial growth.
+    \item \(g: [0,1] \rightarrow \R\) is \(C^2\).
+    \item \(b, \sigma\) are of size 1 (that is, \(||b_s||_{L_p}, ||\sigma_s||_{L_p}\) are bounded) and adapted.
+    \item \(\sigma\) is \(L^2\)-continuous.
+    \item \(\kappa \in \left(\frac{2H}{2H+1}, 1\right)\).
+  \end{enumerate}
+  then we get the following convergence:
+  \begin{equation}
+    V(g)^{n,f}_T(Y) = \frac{1}{n}\sum_{i=1}^{\left\lfloor nT \right\rfloor}f\left( \frac{\overline{Y}(g)^n_i}{\left( k_n/n \right)^H}, \frac{\widehat{Y}(g)^n_i}{\left( k_n/n \right)^{2H}} \right) \overset{\mathbb{P}}{\rightarrow} \int_0^T \mu_f\left( \sigma_s^2\eta\left( g \right), \Theta^2\rho^2 \int_0^1g'(r)^2dr \right)ds
+  \end{equation}
+  where
+  \begin{gather}
+    \Theta =
+    \begin{cases}
+      0 & \kappa \neq \frac{2H}{2H+1} \\
+      \theta &  \kappa = \frac{2H}{2H+1}
+    \end{cases} \\
+    \eta(g) = 2H\int_0^1g(x)\left(g(1)(1-x)^{2H-1}dx + \int_x^1(y-x)^{2H-1}g'(y)dy\right)dx
+  \end{gather}
+\end{theorem}
+Unless otherwise mentioned, the above conditions are assumed in the following lemmas and propositions.
+
+To motivate the normalization term in \(V(g)_T^{n,f}(Y)\), we will first compute a bound on the second moment of an averaged fBM with Hurst parameter \(H\):
+\begin{prop}
+  For \(B^H_t = \int_0^t(t-s)^{H - \frac{1}{2}}\sigma_sdB_s\),
+  \begin{equation}
+    \E\left[ \left(\overline{B^H}(g)^n_i\right)^2 \right]^{\frac{1}{2}} \leq C\left( \frac{k_n}{n} \right)^H
+  \end{equation}
+\end{prop}
+
+\begin{proof}
+  This is a relatively straightforward computation:
+  \begin{align}
+    \phantom{\E\left[ \left(\overline{B^H}(g)^n_i\right)^2 \right]}
+    &\begin{aligned}
+      \mathllap{\E\left[ \left(\overline{B^H}(g)^n_i\right)^2 \right]} &= \E\left[ \left( \sum_{j=1}^{k_n-1} g^n_j \Delta_{i+j-1}^nB^H \right)^2 \right] \\
+                                                                     &= \E\left[ \sum_{j=1}^{k_n-1} (g^n_j\Delta_{i+j-1}^nB^H)^2 + 2\sum_{j=1}^{k_n-2}\sum_{l=j+1}^{k_n-1} g^n_jg^n_l\Delta_{i+j-1}^nB^H\Delta_{i+l-1}^nB^H \right]
+    \end{aligned} \\
+    \intertext{Abbreviating \(t = \frac{i+j-2}{n}, h = \frac{1}{n}, r = l-j\),}
+    &\begin{aligned}
+      \mathllap{} &= \sum_{j=1}^{k_n-1} (g^n_j)^2 \E\left[ \int_0^t \left[ \left( t + h - s \right)^{H-\frac{1}{2}} - \left( t - s \right)^{H - \frac{1}{2}}_+ \right]\sigma_s dB_s \right]^2 \\ &\hspace*{0.5cm}+2\sum_{j=1}^{k_n-2}\sum_{l=j+1}^{k_n-1} g^n_j g^n_l \E \left[ \int_0^t \left[ \left( t + h - s \right)^{H-\frac{1}{2}} - \left( t - s \right)^{H - \frac{1}{2}}_+ \right]\sigma_s dB_s \right. \\ &\hspace*{4.1cm} \left. \cdot \int_0^t \left[ \left( t + (r+1)h - s \right)^{H-\frac{1}{2}} - \left( t + rh - s \right)^{H - \frac{1}{2}}_+ \right]\sigma_s dB_s \vphantom{\int}\right] % Genuinely a terrible LaTeX hack but whatever lmao godspeed to whoever has to read this next
+    \end{aligned}
+    \intertext{Consider the expectations in a single summand, which are just the autocovariances of fBM increments, known asymptotically to be \(\sim h^{2H}K_H(r)\) (in the case of the square, take \(r = 0\)), so}
+    &\begin{aligned}
+      \mathllap{} &\sim \sum_{j=1}^{k_n-1} (g^n_j)^2 h^{2H}K_H + 2\sum_{j=1}^{k_n-2}\sum_{l=j+1}^{k_n-1} g^n_j g^n_l h^{2H}K_H\Gamma_{r}^H \\
+                  &= h^{2H}K_H\left[ \sum_{j=1}^{k_n-1} (g^n_j)^2 + 2\sum_{j=1}^{k_n-2}\sum_{l=j+1}^{k_n-1} g^n_j g^n_l \Gamma_r^H \right]
+    \end{aligned}
+    \intertext{Recall that \(g\) is bounded, so this is bounded as}
+    &\begin{aligned}
+      \mathllap{} &\leq Ch^{2H}\left[ \sum_{j=1}^{k_n-1} 1 + \sum_{j=1}^{k_n-2}\sum_{l=j+1}^{k_n-1} \left( (r+1)^{2H} - 2r^{2H} + (r-1)^{2H} \right) \right]
+    \end{aligned}
+    \intertext{Reindexing, and recalling \(h = \frac{1}{n}, r = l - j\),}
+    &\begin{aligned}
+      \mathllap{} &= Cn^{-2H}\left[ k_n-1 + \sum_{j=1}^{k_n-2}\sum_{r=1}^{k_n-1-j} \left( (r+1)^{2H} - 2r^{2H} + (r-1)^{2H} \right) \right]
+    \end{aligned}
+    \intertext{The inner sum telescopes to \(-1 - (k_n - 1-j)^{2H} + (k_n-j)^{2H}\), which means the entire sum telescopes to}
+    &\begin{aligned}
+      \mathllap{} &= Cn^{-2H}\left[ k_n-1 + -(k_n - 2) + (k_n - 1)^{2H} - 1^{2H}\right] \\
+                  &= Cn^{-2H}(k_n-1)^{2H}
+    \end{aligned}
+  \end{align}
+  Taking square roots gets us what we wanted.
+\end{proof}
+
+The next thing to consider is the drift in the fBM: \(X_0 + A_0 = X_0 + \int_0^tb_sds\); we will show that in the end this does not matter since \(b_s\) is bounded, so we can safely work with only the fBM part of \(X_t\), as long as \(k_n\), the amount of elements we are averaging over, does not grow too fast.
+
+\begin{definition}
+  \(U_t\) will be \(Y_t\) with the drift removed, namely
+  \begin{equation}
+    U_t = Y_t - X_0 - A_0 = B_t^H + \rho Z_t
+  \end{equation}
+\end{definition}
+
+\begin{lemma}
+  If \(\frac{2H}{2H+1} < \kappa < 1\),
+  \begin{equation}
+    \lim_{n \rightarrow \infty} \E\left[ \left| V(g)^{n,f}_T(Y) - V(g)^{n,f}_T(U) \right| \right] = 0
+  \end{equation}
+\end{lemma}
+
+\begin{proof}
+  Recalling the definition of the variation, the difference is really
+  \begin{equation}
+    \E\left[ \left| \frac{1}{n}\sum_{i=1}^{\left\lfloor nT \right\rfloor} \left[ f\left( \frac{\overline{Y}(g)^n_i}{\left( k_n/n \right)^H}, \frac{\widehat{Y}(g)^n_i}{\left( k_n/n \right)^{2H}} \right) - f\left( \frac{\overline{U}(g)^n_i}{\left( k_n/n \right)^H}, \frac{\widehat{U}(g)^n_i}{\left( k_n/n \right)^{2H}} \right) \right] \right| \right]
+  \end{equation}
+  Applying MVT to the difference, we have that this becomes
+  \begin{equation}
+    \frac{1}{n}\sum_{i=1}^{\left\lfloor nT \right\rfloor} \begin{pmatrix} \partial_1 f(\xi^n_{1,i}) & \partial_2 f(\xi^n_{2,i}) \end{pmatrix} \cdot \begin{pmatrix} \frac{\overline{Y}(g)^n_i - \overline{U}(g)^n_i}{(k_n/n)^H} & \frac{\widehat{Y}(g)^n_i - \widehat{U}(g)^n_i}{(k_n/n)^{2H}} \end{pmatrix}
+  \end{equation}
+  Now, by assumption each partial is bounded here, so we only care about the differences. Further, \(\E[|\Delta_{i+j-1}^n A|] = \E\left[\left|\int_{\frac{i+j-2}{n}}^{\frac{i+j-1}{n}}b_sds\right|\right] \leq Cn^{-1}\) by assumption, so \(\E[|\overline{A}(g)^n_i|] \leq \sum_{j=1}^{k_n-1}Cn^{-1} \leq \frac{k_n}{n}\); thus,
+  \begin{equation}
+    \E\left[\left|\frac{\overline{Y}(g)^n_i - \overline{U}(g)^n_i}{(k_n/n)^H}\right|\right] = \E\left[\left|\frac{\overline{A}(g)^n_i}{(k_n/n)^H} \right|\right] \leq \left(\frac{k_n}{n}\right)^{1 - H}
+  \end{equation}
+  which \(\rightarrow 0\) as \(\kappa < 1\). The other difference is a little trickier:
+  \begin{align}
+    \E\left[\left|\frac{\widehat{Y}(g)^n_i - \widehat{U}(g)^n_i}{(k_n/n)^{2H}}\right|\right] &= \E\left[\left|\frac{n^{2H}}{k_n^{2H}}\sum_{j=1}^{k_n}(\Delta g^n_i)^2\left( (\Delta^n_{i+j-1}Y)^2 - (\Delta^n_{i+j-1}U)^2 \right)\right|\right] \\
+                                                                                             &\leq \frac{n^{2H}}{k_n^{2H}}\sum_{j=1}^{k_n}(\Delta g^n_i)^2\left( \E[|(\Delta^n_{i+j-1}A)^2|] + 2\E[|\Delta^n_{i+j-1}A\Delta^n_{i+j-1}U|] \right)
+                                                                                             \intertext{From above, we have that \(\E[|(\Delta^n_{i+j-1}A)^2|] \leq Cn^{-2}\). Remembering that \(\Delta^n_{i+j-1}\rho Z \sim N(0, \rho^2)\), H\"older and Minkowski yield that that}
+  \E[|\Delta^n_{i+j-1}A\Delta^n_{i+j-1}U|] &\leq \E[|\Delta^n_{i+j-1}A|^2]^{\frac{1}{2}}(\E[|\Delta^n_{i+j-1}B^H|^2]^{\frac{1}{2}} + \E[|\Delta^n_{i+j-1}\rho Z|^2]^{\frac{1}{2}}) \\
+                                           &\leq C_1n^{-1}\left( \left(\frac{k_n}{n}\right)^H + C_2 \right) \leq Cn^{-1}
+                                           \intertext{For sufficiently large \(n\), since \(\kappa < 1\). Applying MVT and noting that \(g'\) is bounded by assumption, we have that the expectation is bounded as follows:}
+  \E\left[\left|\frac{\widehat{Y}(g)^n_i - \widehat{U}(g)^n_i}{(k_n/n)^{2H}}\right|\right] &\leq \frac{n^{2H}}{k_n^{2H}}\sum_{j=1}^{k_n} \left(\frac{g'\left( \xi^n_i \right)}{k_n}\right)^2Cn^{-1} \\
+                                                                                           &\leq \frac{n^{2H-1}}{k_n^{2H+1}}
+  \end{align}
+  which, since \(\kappa > \frac{2H}{2H + 1} > \frac{2H-1}{2H+1}\), \(\rightarrow 0\) as \(n \rightarrow \infty\). To conclude, the original expectation is bounded by
+  \begin{equation}
+    \frac{1}{n}\sum_{i=1}^{\left\lfloor nT \right\rfloor}C\left( \E\left[\left|\frac{\overline{Y}(g)^n_i - \overline{U}(g)^n_i}{(k_n/n)^H}\right|\right] + \E\left[\left|\frac{\widehat{Y}(g)^n_i - \widehat{U}(g)^n_i}{(k_n/n)^{2H}}\right|\right]  \right) \rightarrow 0
+  \end{equation}
+  % TODO: Fully justify bounding the first partials of f; not hard just annoying
+\end{proof}
+
+Note that the lower bound on \(\kappa\) is not the most parsimonious choice possible just examining the previous proof; the next step we take is to justify a lower bound of \(\frac{2H}{2H+1}\) rather than \(\frac{2H-1}{2H+1}\). Considering \(\widehat{Y}(g)^n_i\) and the normalization we have selected, we can now restrict the growth rate of \(k_n\) from below to keep \(\widehat{Y}(g)^n_i\) finite.
+
+\begin{lemma}
+  If \(k \geq \frac{2H}{2H+1}\), \(\limsup_{n \rightarrow \infty}\lpnorm{\frac{\widehat{U}(g)^n_i}{(k_n/n)^{2H}}}{p} < \infty\) as \(n \rightarrow \infty\). Further, if \(k > \frac{2H}{2H+1}\), \(\lpnorm{\frac{\widehat{U}(g)^n_i}{(k_n/n)^{2H}}}{p} \rightarrow 0\).
+\end{lemma}
+
+\begin{proof}
+  First consider the quantity \(\widehat{U}(g)^n_i = \widehat{B^H}(g)^n_i + \widehat{\rho Z}(g)^n_i\). Then, Minkowski yields that
+  \begin{equation}
+    \left|\lpnorm{\widehat{B^H}(g)^n_i}{p} - \lpnorm{\widehat{ \rho Z}(g)^n_i}{p}\right| \leq \lpnorm{\widehat{U}(g)^n_i}{p} \leq \lpnorm{\widehat{B^H}(g)^n_i}{p} + \lpnorm{\widehat{ \rho Z}(g)^n_i}{p}
+  \end{equation}
+
+  However, as \(n \rightarrow \infty\), \(\lpnorm{\widehat{B^H}(g)^n_i}{p} \leq \sum_{j=1}^{k_n}|\Delta g^n_j|\lpnorm{(\Delta^n_{i+j-1}B^H)^2}{p} \rightarrow 0\) since fBM is almost surely continuous, so in the limit, we are only worried about \(\lpnorm{\widehat{\rho Z}(g)^n_i}{p}\). However,
+  \begin{align}
+    \lpnorm{\frac{\widehat{\rho Z}(g)^n_i}{(k_n/n)^{2H}}}{p} &\leq \frac{n^{2H}}{k_n^{2H}}\sum_{j=1}^{k_n}\left( \Delta g^n_j \right)^2\lpnorm{(\Delta_{i+j-1}^n \rho Z)^2}{p} \\
+                                                             &= \frac{n^{2H}}{k_n^{2H}}\sum_{j=1}^{k_n} \left(\frac{g'\left( \xi^n_i \right)}{k_n}\right)^2 \lpnorm{(\Delta_{i+j-1}^n \rho Z)^2}{p}
+                                                             \intertext{where the last equality comes from applying MVT for some \(\xi^n_i \in \left( \frac{j-1}{k_n},\frac{j}{k_n} \right)\). Now, since \(\Delta_{i+j-1}^n \rho Z \sim N(0, \rho^2)\), the norm is some constant varying with \(p\), but not \(n\), so the above is bounded by}
+                                                             &\leq C_p\frac{n^{2H}}{k_n^{2H}}\sum_{j=1}^{k_n}\left( \frac{g'(\xi^n_i)}{k_n} \right)^2 \\
+                                                             &\leq C_p\frac{n^{2H}}{k_n^{2H}}\sum_{j=1}^{k_n}\left( \frac{C}{k_n} \right)^2 = C_p\frac{n^{2H}}{k_n^{2H+1}}
+  \end{align}
+  Since \(k_n^{2H+1} = \frac{n^{\kappa(2H + 1)}}{\theta^{2H+1}}\), if \(\kappa > \frac{2H}{2H+1}\), the above bound \(\rightarrow 0\) as \(n \rightarrow \infty\). If \(k_n = \frac{2H}{2H+1}\), exactly, this bound remains as \(C_p\).
+\end{proof}
+
+The problematic part of working with fBM here is that the domain of integration for intervals in the stochastic integral stretches all the way from \(0\), since the integrand is dependent on the upper bound of integration. In normal BM (i.e.\ with \(H = \frac{1}{2}\)), we have that an increment \(B_{t_1} - B_{t_2} = \int_{t_2}^{t_1} dB_s\), but in fBM,
+\[
+  B^H_{t_1} - B^H_{t_2} = \int_0^{t_1} \left[(t_1 - s)^{H - \frac{1}{2}} - (t_2 - s)_+^{H - \frac{1}{2}} \right]dB_s
+\]
+
+What we would like to be able to do is to truncate this interval arbitrarily close to where we begin averaging, namely at \(\frac{i}{n}\) in the case of \(\overline{U}(g)^n_i\). To this purpose, we make the following definitions and prove the following lemma:
+
+\begin{definition}
+  A \textit{truncated} increment of a fBM \(B^H_t\) is defined as
+  \begin{equation}
+    \Delta_{i+j-1}^{n,\epsilon} B^H_t =  \int_{\frac{i}{n}-\epsilon}^{\frac{i+j-1}{n}} \left[ \left( \frac{i+j-1}{n} -s \right)^{H - \frac{1}{2}} - \left( \frac{i+j-1}{n} -s \right)^{H - \frac{1}{2}} \right]\sigma_s dB_s
+  \end{equation}
+
+  Similarly, we truncate \(U_t\) as follows:
+  \begin{equation}
+    \Delta_{i+j-1}^{n,\epsilon} U_t = \Delta_{i+j-1}^{n,\epsilon} B^H_t + \Delta_{i+j-1}^n \rho Z
+  \end{equation}
+\end{definition}
+
+In order for this truncation to be a reasonable endeavor, we need the error we are making to be small; the amount which we discard must vanish in the limit if we take \(\epsilon \rightarrow 0\).
+
+\begin{lemma}
+  \begin{equation}
+    \limsup_{n \rightarrow \infty} \E \left[ \left| V(g)^{n,f}_T(U) - \frac{1}{n}\sum_{i=\left\lfloor n\epsilon \right\rfloor + 1}^{\left\lfloor nT \right\rfloor} f\left( \frac{\overline{U}(g)^{n,\epsilon}_i}{(k_n/n)^H}, \frac{\widehat{U}(g)^{n,\epsilon}_i}{(k_n/n)^{2H}} \right) \right| \right] < C\epsilon
+  \end{equation}
+\end{lemma}
+
+\begin{proof}
+  The difference is composed of two parts:
+  \begin{gather}
+    \label{eqn:truncdif1}
+    \frac{1}{n}\sum_{i=1}^{\left\lfloor n\epsilon \right\rfloor} f\left( \frac{\overline{U}(g)^n_i}{(k_n/n)^H}, \frac{\widehat{U}(g)^n_i}{(k_n/n)^H} \right) \\
+    \label{eqn:truncdif2}
+    \frac{1}{n}\sum_{i=\left\lfloor n\epsilon \right\rfloor + 1}^{\left\lfloor nT \right\rfloor}\left[ f\left( \frac{\overline{U}(g)^{n}_i}{(k_n/n)^H}, \frac{\widehat{U}(g)^{n}_i}{(k_n/n)^H} \right) -  f\left( \frac{\overline{U}(g)^{n,\epsilon}_i}{(k_n/n)^H}, \frac{\widehat{U}(g)^{n,\epsilon}_i}{(k_n/n)^H} \right) \right]
+  \end{gather}
+
+  We have that \(f(\cdot)\) is of size \(1\), since \(f\) is assumed to be of polynomial growth and we showed in  that the arguments are at worst of size \(1\). Then, \(\exists C > 0\) such that \((\ref{eqn:truncdif1}) < C\epsilon\). Then, we want to show that as \(n \rightarrow \infty\), \((\ref{eqn:truncdif2}) \rightarrow 0\). % We actually only have that the second moment is of size 1. TODO: Either work around this limitation, or somehow show that we do in fact have this result for all L-p moments
+
+  MVT reduces (\ref{eqn:truncdif2}) to
+  \begin{gather}
+    \frac{1}{n}\sum_{\left\lfloor n\epsilon \right\rfloor + 1}^{\left\lfloor nT \right\rfloor} \begin{pmatrix} \partial_1 f(\xi_{1,i}^n) & \partial_2 f(\xi_{2,i}^n) \end{pmatrix} \cdot \begin{pmatrix} \frac{\overline{U}(g)^{n,\epsilon}_i - \overline{U}(g)^{n}_i}{(k_n/n)^H} & \frac{\widehat{U}(g)^{n,\epsilon}_i - \widehat{U}(g)^{n}_i}{(k_n/n)^H} \end{pmatrix}
+  \end{gather}
+
+  In particular, we have that the partial derivatives are of size 1, so all that matters is that the differences on the right \(\rightarrow 0\).
+
+  Explicitly,
+  \begin{align}
+    \overline{U}(g)^{n}_i - \overline{U}(g)^{n,\epsilon}_i &= \sum_{j=1}^{k_n-1}g^n_i(\Delta_{i+j-1}^{n}U - \Delta_{i+j-1}^{n,\epsilon}U) \\
+                                                           &= \sum_{j=1}^{k_n-1}g^n_i\int_0^{\frac{i}{n}-\epsilon}\left[ \left( \frac{i+j-1}{n} -s \right)^{H - \frac{1}{2}} - \left( \frac{i+j-1}{n} -s \right)^{H - \frac{1}{2}} \right]\sigma_sdB_s \\
+    \intertext{By BDG,}
+    ||\overline{U}(g)^{n}_i - \overline{U}(g)^{n,\epsilon}_i||_{L_p} &\leq \E \left[ \left(\int_0^{\frac{i}{n}-\epsilon}\left[ \left( \frac{i+j-1}{n} -s \right)^{H - \frac{1}{2}} - \left( \frac{i+j-1}{n} -s \right)^{H - \frac{1}{2}} \right]^2\sigma_s^2 ds\right)^{\frac{p}{2}} \right]^{\frac{1}{p}} \\
+                                                           &\leq \left(\int_0^{\frac{i}{n}-\epsilon} \left[ \left( \frac{i+j-1}{n} -s \right)^{H - \frac{1}{2}} - \left( \frac{i+j-1}{n} -s \right)^{H - \frac{1}{2}} \right]^2||\sigma_s^2||_{L_{p/2}}ds\right)^{\frac{1}{2}}
+                                                             \intertext{Since \(\sigma\) is of size 1,}
+                                                           &\leq C_p \left( \int_0^{\frac{i}{n}-\epsilon} \left( \left( \frac{i+l}{n} - s \right)^{H-\frac{1}{2}} - \left( \frac{i+l-1}{n} -s \right)^{H-\frac{1}{2}} \right)^2ds\right) ^{\frac{1}{2}} \\
+    \intertext{Substituting \(r = \frac{i+l-1}{n}-s\),}
+                                                           &= C_p \left( \int_{\epsilon + \frac{l-1}{n}}^{\frac{i+l-1}{n}} \left( \left( r + \frac{1}{n} \right)^{H-\frac{1}{2}} - r^{H-\frac{1}{2}} \right)^2dr\right) ^{\frac{1}{2}} \\
+                                                           &\leq C_p \left( \int_\epsilon^{\infty} \left( \left( r + \frac{1}{n} \right)^{H-\frac{1}{2}} - r^{H-\frac{1}{2}} \right)^2dr\right) ^{\frac{1}{2}} \\
+    \intertext{By MVT,}
+                                                           &\leq C_p \left( \int_\epsilon^{\infty} \left( \frac{1}{n}\left( H-\frac{1}{2} \right)r^{H-\frac{3}{2}} \right)^2dr\right) ^{\frac{1}{2}} \\
+                                                           &\leq C_p n^{-1}\left| H-\frac{1}{2} \right|\left( \int_\epsilon^{\infty} \left( r^{H-\frac{3}{2}} \right)^2dr\right) ^{\frac{1}{2}} \\
+                                                           &= C_{p} n^{-1}
+  \end{align}
+  Normalizing by \((k_{n}/n)^{H}\), we get that \(\frac{||\overline{U}(g)^{n}_i - \overline{U}(g)^{n,\epsilon}_i||_{L_p}}{(k_{n}/n)^{H}} \leq C_{p}n^{(\kappa - 1)H - 1}\) which \(\rightarrow 0\) as \(n \rightarrow \infty\).
+
+  Next,
+  \begin{align}
+    \widehat{U}(g)^{n}_i - \widehat{U}(g)^{n,\epsilon}_i &= \sum_{j=1}^{k_n-1}(\Delta g^n_i)^2((\Delta_{i+j-1}^{n}U)^2 - (\Delta_{i+j-1}^{n,\epsilon}U^2) \\
+                                                         &= \sum_{j=1}^{k_n-1}(\Delta g^n_i)^2(\Delta_{i+j-1}^{n}U - \Delta_{i+j-1}^{n,\epsilon}U)(\Delta_{i+j-1}^{n}U + \Delta_{i+j-1}^{n,\epsilon}U) \\
+    \intertext{Which asymptotically is}
+                                                         &\sim k_n \cdot k_n^{-2} \cdot n^{-1} \cdot 1 = k_{n}^{-1}n^{-1}
+  \end{align}
+  and which is \(\sim k_{n}^{-1-H}n^{1-H} \rightarrow 0\) as \(n \rightarrow \infty\).
+\end{proof}
+
+Next step is to discretize \(\sigma\) and remove the fBM portion from the second argument:
+
+\begin{lemma}
+  \begin{align}
+    \phantom{}
+    \begin{aligned}
+      &\lim_{\epsilon \rightarrow 0}\lim_{n \rightarrow \infty}\E \left[ \left| \frac{1}{n}\sum_{i=\left\lfloor n\epsilon \right\rfloor + 1}^{\left\lfloor nT \right\rfloor} \left[ f\left( \frac{\overline{U}(g)^{n,\epsilon}_i}{(k_n/n)^H}, \frac{\widehat{U}(g)^{n,\epsilon}_i}{(k_n/n)^{2H}} \right) \right. \right. \right. \\
+      & \hspace*{2cm} - \left. \left. \left. f\left( \frac{\sigma_{\frac{i}{n}-\epsilon}\overline{B'^H}(g)^{n,\epsilon}_i + \rho\overline{Z}(g)^n_i}{(k_n/n)^{H}}, \frac{\rho^2\widehat{Z}(g)^n_i}{(k_n/n)^{2H}}\right) \right] \right| \right] = 0
+    \end{aligned}
+  \end{align}
+  where \(B'^{H}\) is fractional brownian motion with unit volatility and Hurst index \(H\) (we use \(B^{H}\) as a part of \(U\)).
+  % TODO: Clean up statement, which is not exactly what is proved, or is immediate from the proof, but not exactly it.
+\end{lemma}
+
+\begin{proof}
+  Via MVT, the difference becomes
+  \begin{equation}
+    \frac{1}{n}\sum_{i=\left\lfloor n\epsilon \right\rfloor + 1}^{\left\lfloor nT \right\rfloor} \begin{pmatrix} \partial_1 f(\xi_{1,i}^n) & \partial_2 f(\xi_{2,i}^n) \end{pmatrix} \cdot \begin{pmatrix} \frac{\overline{U}(g)^{n,\epsilon}_i - \sigma_{\frac{i}{n}-\epsilon}\overline{B^H}(g)^{n,\epsilon}_i}{(k_n/n)^H} & \frac{\widehat{Y}(g)^{n,\epsilon}_i - \rho^2\widehat{Z}(g)^{n}_i}{(k_n/n)^H} \end{pmatrix}
+  \end{equation}
+
+  Again, all we care about are the differences:
+  \begin{gather}
+    \label{eqn:discdiff1}
+    \frac{\overline{B^{H}}(g)^{n,\epsilon}_i - \sigma_{\frac{i}{n}-\epsilon}\overline{B'^H}(g)^{n,\epsilon}_i}{(k_n/n)^H} \\
+    \label{eqn:discdiff2}
+    \frac{\widehat{B^{H}}(g)^{n,\epsilon}_i - \rho^2\widehat{Z}(g)^{n}_i}{(k_n/n)^H}
+  \end{gather}
+
+  Handling (\ref{eqn:discdiff1}) first, we have that \(\E \left[ \left(\overline{B^{H}}(g){i}^{n,\epsilon} - \sigma_{\frac{i}{n}-\epsilon}\overline{B'^{H}}(g)^{n,\epsilon}_{i} \right)^{2}\right]\) becomes the following:
+  \begin{align}
+    & \sum_{j=1}^{k_{n}}g_{j}^{n}\sum_{l=1}^{k_{n}}g_{j}^{n}\E \left[ \left( \Delta_{i+j-1}^{n,\epsilon}B^{H} - \sigma_{\frac{i}{n}-\epsilon}\Delta_{i+j-1}^{n,\epsilon}B'^{H} \right)\left( \Delta_{i+l-1}^{n,\epsilon}B^{H} - \sigma_{\frac{i}{n}-\epsilon}\Delta_{i+l-1}^{n,\epsilon}B'^{H} \right) \right]
+    \intertext{Unfolding definitions and using Ito's isometry, the expectation becomes, where we take \(j \leq l\), and the subscript \(+\) denotes that the expression vanishes outside of the appropriate domain:}
+    &\begin{aligned}
+      \mathllap{} & = \E \left[ \left(\int_{\frac{i}{n}-\epsilon}^{\frac{i+l-1}{n}} \left( \frac{i+j-1}{n} - s \right)_{+}^{H-\frac{1}{2}} - \left( \frac{i+j-2}{n} -s \right)_{+}^{H-\frac{1}{2}} \right) \right. \\ &\hspace*{1.2cm} \cdot \left. \vphantom{v\int_{\frac{i}{n}-\epsilon}^{\frac{i+l-1}{n}} \left( \frac{i+j-1}{n} - s \right)_{+}^{H-\frac{1}{2}}} \left( \left( \frac{i+j-1}{n} - s \right)_{+}^{H-\frac{1}{2}} - \left( \frac{i+j-2}{n} -s \right)_{+}^{H-\frac{1}{2}} \right)(\sigma_{s} - \sigma_{\frac{i}{n}-\epsilon})^{2}ds \right]
+    \end{aligned} \\
+    &\begin{aligned}
+      &\leq \sup_{s \in (\frac{i}{n} - \epsilon, \frac{i + k_{n}}{n})}\E \left[ (\sigma_{s} - \sigma_{\frac{i}{n} - \epsilon})^{2} \right] \E \left[ \left(\int_{\frac{i}{n}-\epsilon}^{\frac{i+l-1}{n}} \left( \frac{i+j-1}{n} - s \right)_{+}^{H-\frac{1}{2}} - \left( \frac{i+j-2}{n} -s \right)_{+}^{H-\frac{1}{2}} \right) \right. \\ &\hspace*{6.2cm} \cdot \left. \vphantom{v\int_{\frac{i}{n}-\epsilon}^{\frac{i+l-1}{n}} \left( \frac{i+j-1}{n} - s \right)_{+}^{H-\frac{1}{2}}} \left( \left( \frac{i+j-1}{n} - s \right)_{+}^{H-\frac{1}{2}} - \left( \frac{i+j-2}{n} -s \right)_{+}^{H-\frac{1}{2}} \right)ds \right]
+    \end{aligned} \\
+    \intertext{Taking \(u = \frac{i+j-1}{n} - s, h = \frac{1}{n}, r = {l - j}\), and \(S_{n,e}\) as the above supremum,}
+    &= S_{n,\epsilon} \int_{0}^{t+h}\left( u_{+}^{H - \frac{1}{2}} - (u - h)_{+}^{H - \frac{1}{2}}\right)\left( (u + rh)_{+}^{H - \frac{1}{2}} - (u + (r-1)h)_{+}^{H - \frac{1}{2}} \right)du \\
+    \intertext{Let \(u = vh\):}
+    &= S_{n,\epsilon} h^{2H}\int_{0}^{\frac{t}{h}+1}\left( b_{+}^{H - \frac{1}{2}} - (v - 1)_{+}^{H - \frac{1}{2}}\right)\left( (v + r)_{+}^{H - \frac{1}{2}} - (v + r-1)_{+}^{H - \frac{1}{2}} \right)du \\
+    \intertext{Which becomes, as \(n \rightarrow \infty\) and \(h \rightarrow 0\), asymptotically}
+    &\sim S_{n,\epsilon} h^{2H}K_{H}\Gamma_{r}^{H}
+  \end{align}
+  Now, we can reconsider the original summation, which is bounded by (recall that \(g\) is bounded by some constant \(C_{0}\)):
+  \begin{align}
+    C_{0}S_{n,\epsilon} h^{2H}\sum_{j,l=1}^{k_{n}}K_{H}\Gamma_{r}^{H} &= C_{0}S_{n,\epsilon}h^{2H} \left(\sum_{j=l=1}^{k_{n}}K_{H} + 2\sum_{1 \leq j < l \leq k_{n}}\frac{1}{2}\left( (r+1)^{2H} - 2r^{2H} + (r-1)^{2H} \right)\right) \\
+    \intertext{Telescoping,}
+                                                                      &= C_{0}S_{n,\epsilon}h^{2H} K_{H}((k_{n}-1)^{2H} + 3 + 4^{H})
+  \end{align}
+  which goes \(\rightarrow 0\) as \(n \rightarrow \infty\) and \(\epsilon \rightarrow 0\) by the \(L_{2}\)-continuity of \(\sigma\) after normalizing by \((k_{n}/n)^{2H}\).
+\end{proof}
+
+Now, we are able to center to the conditional expectation, with the ultimate goal of computing an explicit form:
+\begin{lemma}
+  \begin{align}
+    \phantom{}
+    &\begin{aligned}
+      \mathllap{} &\frac{1}{n}\sum_{i = \left\lfloor n\epsilon \right\rfloor + 1}^{\left\lfloor nT \right\rfloor} \left[ \vphantom{\E \left[ f\left( \frac{\sigma_{\frac{i}{n}-\epsilon}\overline{B^H}(g)^{n,\epsilon}_i + \rho\overline{Z}(g)^n_i}{(k_n/n)^{2H}}, \frac{\rho^2\widehat{Z}(g)^n_i}{(k_n/n)^H}\right) \right] } f\left( \frac{\sigma_{\frac{i}{n}-\epsilon}\overline{B^H}(g)^{n,\epsilon}_i + \rho\overline{Z}(g)^n_i}{(k_n/n)^{2H}}, \frac{\rho^2\widehat{Z}(g)^n_i}{(k_n/n)^H}\right) \right. \\ &\hspace*{2.1cm} - \left. \E\left[ f\left( \frac{\sigma_{\frac{i}{n}-\epsilon}\overline{B^H}(g)^{n,\epsilon}_i + \rho\overline{Z}(g)^n_i}{(k_n/n)^{H}}, \frac{\rho^2\widehat{Z}(g)^n_i}{(k_n/n)^{2H}}\right) \big| \mathcal{F}_{\frac{i-1}{n}} \right] \vphantom{\frac{1}{n}\sum_{i = \left\lfloor n\epsilon \right\rfloor + 1}^{\left\lfloor nT \right\rfloor}} \right] \overset{\mathbb{P}}{\rightarrow} 0
+    \end{aligned}
+  \end{align}
+  % TODO: Define the filtration somewhere, even if it is just the natural one I think
+\end{lemma}
+
+\begin{proof}
+  Abbreviate \(f\left( \frac{\sigma_{\frac{i}{n}-\epsilon}\overline{B^H}(g)^{n,\epsilon}_i + \rho\overline{Z}(g)^n_i}{(k_n/n)^{H}}, \frac{\rho^2\widehat{Z}(g)^n_i}{(k_n/n)^{2H}}\right)\) to \(f_{i}\). We will show that
+  \begin{equation}
+    \E \left[ \left( \sum_{i =1}^{\lfloor nT \rfloor} f_i - \E \left[ f_i \mid \mathcal{F}_{\frac{i-1}{n}} \right] \right)^2 \right] \to 0
+  \end{equation}
+  which gives us convergence in probability. Developing the square, this becomes
+  \begin{equation}
+    \label{eqn:centering1}
+    \frac{1}{n^2} \sum_{i, j = \lfloor n\epsilon\rfloor + 1}^{\lfloor nT \rfloor} \E \left[ \left\{ f_i - \E[ f_i \mid \mathcal{F}_{\frac{i - 1}{n}} ] \right\} \left\{f_j - \E[ f_j \mid \mathcal{F}_{\frac{j - 1}{n}} ] \right\} \right]
+  \end{equation}
+  By conditioning, we can see that if \(\left( \frac{i}{n} - \epsilon, \frac{i + k_{n}}{n} \right)\) and \(\left( \frac{i}{n} - \epsilon, \frac{i + k_{n}}{n} \right)\) are disjoint, then this covariance is actually 0 since all of the \(i\) terms will be \(\mathcal{F}_{\frac{j-1}{n}}\)-measurable. In this case,
+  \begin{align}
+  & \E \left[ \E \left[ \left\{ f_i - \E[ f_i \mid \mathcal{F}_{\frac{i - 1}{n}} ] \right\} \left\{f_j - \E[ f_j \mid \mathcal{F}_{\frac{j - 1}{n}} ] \right\} \bigr\vert \mathcal{F}_{\frac{j - 1}{n}} \right] \right] \\
+  & = \E \left[ \left( f_i - \E[ f_i \mid \mathcal{F}_{\frac{i - 1}{n}} ] \right) \E \left[ \left\{f_j - \E[ f_j \mid \mathcal{F}_{\frac{j - 1}{n}} ] \right\} \bigr\vert \mathcal{F}_{\frac{j - 1}{n}} \right] \right] \\
+  & = \E \left[ \left( f_i - \E[ f_i \mid \mathcal{F}_{\frac{i - 1}{n}} ] \right) \E \left[  f_j - f_j  \bigr\vert \mathcal{F}_{\frac{j - 1}{n}} \right] \right] = 0
+  \end{align}
+
+  So in (\ref{eqn:centering1}), we can perform the following size estimate:
+  \begin{equation}
+    \left(\frac{1}{n^2}\right) \times \lfloor nT \rfloor \times (2 k_n + n\epsilon) \times C \sim C\epsilon \rightarrow 0
+  \end{equation}
+  as \(\epsilon \rightarrow 0\). The above estimate holds since for each \(i\) index, there will be at \(\sim 2 k_n + n\epsilon\) \(j\) indices for which the corresponding expectation is not zero. Each of these terms will be of size one due to our conditions on \(f\).
+\end{proof}
+
+We now define an auxilliary function \(\mu_{f}\) to simplify future expressions.
+\begin{definition}
+  Define
+  \begin{equation}
+    \mu_f(v_1, v_2) = \E\left[ f(\sqrt{v_1}Z_1 + \sqrt{v_2}Z_2, 2v) \right]
+  \end{equation}
+  where \(Z_1, Z_2 \sim N(0,1)\) and are i.i.d.
+\end{definition}
+
+\begin{lemma}
+  \begin{align}
+    \phantom{}
+    &\begin{aligned}
+      \mathllap{} &\lim_{n \rightarrow \infty} \E\left[ \sum_{i=\lfloor n\epsilon \rfloor + 1}^{\lfloor nT \rfloor}f\left( \frac{\sigma_{\frac{i}{n}-\epsilon}\overline{B^H}(g)^{n,\epsilon}_i + \rho\overline{Z}(g)^n_i}{(k_n/n)^{2H}}, \frac{\rho^2\widehat{Z}(g)^n_i}{(k_n/n)^{2H}}\right) \right. \\
+                  &\hspace*{1.75cm} \left. - \mu_f\left( \frac{\sigma^2_{\frac{i}{n}-\epsilon}}{(k_n/n)^{2H}}\sum_{j,l = 1}^{k_n-1} g^n_jg^n_l\Gamma^H_{|j-l|}, \frac{\rho^2}{(k_n/n)^{2H}}\sum_{j=\lfloor n\epsilon \rfloor + 1}^{k_n}(\Delta g^n_j)^2 \right)\big| \mathcal{F}_{\frac{i-1}{n}} \right] \rightarrow 0
+    \end{aligned}
+  \end{align}
+\end{lemma}
+
+\begin{proof}
+  The second argument will be handled first; we wish to show that
+  \begin{align}
+    \phantom{}
+    &\begin{aligned}
+      \mathllap{} &\lim_{n \rightarrow \infty} \E\left[ \sum_{i=\lfloor n\epsilon \rfloor + 1}^{\lfloor nT \rfloor}f\left( \frac{\sigma_{\frac{i}{n}-\epsilon}\overline{B^H}(g)^{n,\epsilon}_i + \rho\overline{Z}(g)^n_i}{(k_n/n)^{2H}}, \frac{\rho^2\widehat{Z}(g)^n_i}{(k_n/n)^{2H}}\right) \right. \\
+                  &\hspace*{1.75cm} \left. - f\left( \frac{\sigma_{\frac{i}{n}-\epsilon}\overline{B^H}(g)^{n,\epsilon}_i + \rho\overline{Z}(g)^n_i}{(k_n/n)^{2H}}, \frac{2\rho^{2}}{(k_{n}/n)^{2H}}\sum_{j=1}^{k_{n}}(\Delta g^{n}_{j})^{2}\right)\big| \mathcal{F}_{\frac{i-1}{n}} \right] \rightarrow 0
+    \end{aligned}
+  \end{align}
+  Usage of MVT as above yields that it is sufficient to show that it is enough to show that as \(n \rightarrow \infty\),
+  \begin{equation}
+    \E \left[ \frac{\rho^{2}\widehat{Z}(g)^{n}_{i}}{(k_{n}/n)^{H}} - \frac{2\rho^{2}}{(k_{n}/n)^{2H}}\sum_{j=1}^{k_{n}}(\Delta g^{n}_{j})^{2}\right] \rightarrow 0
+  \end{equation}
+
+  We will handle the second moment instead, which bounds the first moment from above. The square of the expectation becomes
+  \begin{align*}
+    & \frac{\rho^{4}n^{4H}}{k_{n}^{4H}}\sum_{j,l = 1}^{k_{n}} (\Delta g^{n}_{j})^{2}(\Delta g^{n}_{l})^{2} \E \left[ (\Delta_{i+j-1}^{n}Z^{2}  - 2) (\Delta_{i+l-1}^{n}Z^{2}  - 2)\right] \leq \frac{\rho^{4}n^{4H}}{k_{n}^{4H}} 3k_{n}k_{n}^{-4}C
+  \end{align*}
+  Note that the covariance in the sum is 0 unless \(|l - j| \leq 1\), since otherwise the two distributions \(\Delta_{i+j-1}^{n}Z^{2}\) and \(\Delta_{i+l-1}^{n}Z^{2}\) are independent. Then, since the covariance is bounded and \(\Delta g^{n}_{i} \sim k_{n}^{-1}\), the above inequality follows for some constant \(C\). Taking the square root, we have that the desired expectation is bound by
+  \begin{equation}
+    C\rho^{2}\frac{n^{2H}}{k_{n}^{2H + \frac{3}{2}}} \rightarrow 0
+  \end{equation}
+
+  To handle the first argument, we will want to compute the variance \(v_{1}\) of the random variable \(\frac{\sigma_{\frac{i}{n}-\epsilon}\overline{B^{H}}(g)^{n,\epsilon}_{i}}{(k_{n}/n)^{H}}\); in particular, this is explicitly
+  \begin{equation}
+    \Var \left( \frac{\sigma_{\frac{i}{n}-\epsilon}}{(k_{n}/n)^{H}}\sum_{j=\lfloor n\epsilon \rfloor + 1}^{k_{n}-1} g^{n}_{j}\Delta_{i+h-1}^{n,\epsilon}B^{H}\right) = \sum_{j,l = \lfloor n\epsilon \rfloor + 1}^{k_{n}-1}g^{n}_{j}g^{n}_{l}\Cov \left( \Delta^{n,\epsilon}_{i+j-1}B^{H}, \Delta^{n,\epsilon}_{i+l-1}B^{H} \right)
+  \end{equation}
+
+  We will now proceed to show that we can really use the covariance of the untruncated fBM, i.e. that as \(n \rightarrow \infty\),
+  \begin{equation}
+    \sup_{j,l} \sup_{i \geq \lfloor n\epsilon \rfloor} \lpnorm{\Cov \left(  \Delta^{n,\epsilon}_{i+j-1}B^{H}, \Delta^{n,\epsilon}_{i+l-1}B^{H} \right) - \Cov \left(  \Delta^{n}_{i+j-1}B^{H}, \Delta^{n}_{i+l-1}B^{H} \right)}{p} \rightarrow 0
+  \end{equation}
+  The difference between the two covariances is exactly
+  \begin{align}
+    &\begin{aligned}
+      \mathllap{} & \int_{0}^{\frac{i}{n}-\epsilon}\left[\left( \frac{i+j-1}{n} -s \right)^{H - \frac{1}{2}} - \left(\frac{i+j-2}{n} -s \right)^{H - \frac{1}{2}}\right] \\
+      &\hspace*{1.5cm} \cdot \left[\left( \frac{i+l-1}{n} -s \right)^{H - \frac{1}{2}} - \left(\frac{i+l-2}{n} -s \right)^{H - \frac{1}{2}}\right]ds \\
+    \end{aligned} \\
+    \intertext{Which is bounded by MVT to}
+    &\leq \frac{(H-\frac{1}{2})^{2}}{n^{2}}\int_{0}^{\frac{i}{n}-\epsilon} \left( \left( \frac{i+j-2}{n} -s\right)\left( \frac{i+l-2}{n} -s \right) \right)^{H-\frac{3}{2}}ds
+    \intertext{Using the general inequality \(xy \leq x^{2}+y^{2}\), this is bounded by}
+    &\leq \frac{(H-\frac{1}{2})^{2}}{n^{2}}\left[\int_{0}^{\frac{i}{n}-\epsilon} \left( \frac{i+j-2}{n} -s\right)^{2H-3}ds + \int_{0}^{\frac{i}{n}-\epsilon} \left( \frac{i+l-2}{n} -s\right)^{2H - 3}ds\right] \\
+    \intertext{Taking a change of variables \(r_{j} = \frac{i+j-2}{n}-s, r_{l} = \frac{i+l-2}{n}-s \) for clarity,}
+    &= \frac{(H-\frac{1}{2})^{2}}{n^{2}}\left[\int_{\frac{j-2}{n}+\epsilon}^{\frac{i+j-2}{n}} r_{j}^{2H-3}ds + \int_{\frac{l-2}{n}+\epsilon}^{\frac{i+l-2}{n}} r_{l}^{2H - 3}ds\right] \\
+    &\leq \frac{(H-\frac{1}{2})^{2}}{n^{2}}\left[\int_{\frac{j-2}{n}+\epsilon}^{\infty} r_{j}^{2H-3}ds + \int_{\frac{l-2}{n}+\epsilon}^{\infty} r_{l}^{2H - 3}ds\right] \\
+                    &\leq C\frac{(H-\frac{1}{2})^{2}}{n^{2}}
+  \end{align}
+  which \(\rightarrow 0\) as desired.
+
+  Then, we have that as \(n \rightarrow \infty\), the desired variance \(\rightarrow \sigma^{2}_{\frac{i}{n}-\epsilon}\sum_{j,l=}\)
+\end{proof}
+
+\begin{lemma}
+  \begin{align}
+    \phantom{}
+    &\begin{aligned}
+      \mathllap{} &\lim_{\epsilon \rightarrow 0}\E\left[ \left| \frac{1}{n}\sum_{i = \left\lfloor n\epsilon \right\rfloor + 1}^{\left\lfloor nT \right\rfloor}\mu_f\left( \frac{\sigma^2_{\frac{i}{n}-\epsilon}}{(k_n/n)^{2H}}\sum_{j,l = 1}^{k_n-1} g^n_jg^n_l\Gamma^H_{|j-l|}, \frac{\rho^2}{(k_n/n)^{2H}}\sum_{j=1}^{k_n}(\Delta g^n_j)^2 \right) \right.\right. \\
+                  &\hspace*{2cm} \left.\left. - \int_0^T\mu_f\left(\sigma_{s}^2\mu_f(\nu(g), \Theta^2\rho^2\int_0^1g'(r)^2dr)\right) \vphantom{\E\left[ \left| \frac{1}{n}\sum_{i = \left\lfloor n\epsilon \right\rfloor + 1}^{\left\lfloor nT \right\rfloor}\mu_f\left( \frac{\sigma^2_{\frac{i}{n}-\epsilon}}{(k_n/n)^{2H}}\sum_{j,l = 1}^{k_n-1} g^n_jg^n_l\Gamma^H_{|j-l|}, \frac{\rho^2}{(k_n/n)^{2H}}\sum_{j=1}^{k_n}(\Delta g^n_j)^2 \right) \right|\right]} \right|\right] \overset{\mathbb{P}}{\rightarrow} 0
+      \end{aligned}
+  \end{align}
+\end{lemma}
+
+\begin{proof}
+  % TODO
+\end{proof}
+
+The resulting theorem is just putting steps together. Restating it from before,
+\begin{theorem}
+  Given some fBM with measurement error,
+  \begin{equation}
+    Y_t = X_t + \rho Z_t
+  \end{equation}
+  where
+  \begin{equation}
+    X_t = X_0 + A_t + B_t^H = X_0 + \int_0^tb_sds + K_H^{-\frac{1}{2}}\int_0^t(t-s)^{H - \frac{1}{2}}\sigma_sdB_s
+  \end{equation}
+  if we have the following conditions, % TODO: Explain what K_H is?
+  \begin{enumerate}
+    \item \(f: \R^L \rightarrow \R\) is \(C^2\) with all partial derivatives up to order 2 of at most polynomial growth.
+    \item \(g: [0,1] \rightarrow \R\) is piecewise \(C^2\).
+    \item \(b, \sigma\) are of size 1 (that is, \(||b_s||_{L_p}, ||\sigma_s||_{L_p}\) are bounded) and adapted.
+    \item \(\sigma\) is \(L^2\)-continuous.
+    \item \(\kappa \in \left(\frac{2H}{2H+1}, 1\right)\).
+  \end{enumerate}
+  then we get the following convergence:
+  \begin{equation}
+    V(g)^{n,f}_T(Y) = \frac{1}{n}\sum_{i=1}^{\left\lfloor nT \right\rfloor}f\left( \frac{\overline{Y}(g)^n_i}{\left( k_n/n \right)^H}, \frac{\widehat{Y}(g)^n_i}{\left( k_n/n \right)^{2H}} \right) \overset{\mathbb{P}}{\rightarrow} \int_0^T \mu_f\left( \sigma_s^2\eta\left( g \right), \Theta^2\rho^2 \int_0^1g'(r)^2dr \right)ds
+  \end{equation}
+  where
+  \begin{gather}
+    \Theta =
+    \begin{cases}
+      0 & \kappa \neq \frac{2H}{2H+1} \\
+      \theta &  \kappa = \frac{2H}{2H+1}
+    \end{cases} \\
+    \eta(g) = 2H\int_0^1g(x)\left(g(1)(1-x)^{2H-1}dx + \int_x^1(y-x)^{2H-1}g'(y)dy\right)dx
+  \end{gather}
+\end{theorem}
+
+\begin{proof}
+
+\end{proof}
+
+\end{document}
